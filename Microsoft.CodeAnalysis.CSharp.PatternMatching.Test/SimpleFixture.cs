@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
 using NUnit.Framework;
 using P = Microsoft.CodeAnalysis.CSharp.PatternMatching.Pattern;
 
@@ -13,6 +7,7 @@ namespace Microsoft.CodeAnalysis.CSharp.PatternMatching.Test
     [TestFixture]
     public class SimpleFixture
     {
+        [Test]
         public void SimpleTest()
         {
             var syntaxTree = GetSimpleSyntaxTree();
@@ -29,8 +24,8 @@ namespace Microsoft.CodeAnalysis.CSharp.PatternMatching.Test
                         P.InvocationExpression(
                             P.MemberAccessExpression(
                                 SyntaxKind.SimpleMemberAccessExpression,
-                                P.IdentifierName("WriteLine"),
-                                P.IdentifierName("Console")
+                                P.IdentifierName("Console"),
+                                P.IdentifierName("WriteLine")
                             ),
                             P.ArgumentList(
                                 P.Argument(
@@ -43,7 +38,7 @@ namespace Microsoft.CodeAnalysis.CSharp.PatternMatching.Test
                     )
                 ).IsMatch(methodDeclaration.Body)
             )
-                Assert.AreEqual("Hello world!", expression);
+                Assert.That("Hello world!", Is.EqualTo(expression));
         }
 
         [Test]
@@ -68,27 +63,29 @@ namespace Microsoft.CodeAnalysis.CSharp.PatternMatching.Test
                 invocation.ArgumentList.Arguments[0].Expression is LiteralExpressionSyntax literalExpression
             )
             {
-                Assert.AreEqual("Hello world!", literalExpression.Token.ValueText);
+                Assert.That("Hello world!", Is.EqualTo(literalExpression.Token.ValueText));
             }
         }
 
         private static SyntaxTree GetSimpleSyntaxTree()
         {
-            var syntaxTree = CSharpSyntaxTree.ParseText(@"
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+            var syntaxTree = CSharpSyntaxTree.ParseText("""
 
-public static class Program
-{
-    public static void Main(string[] args)
-    {
-        Console.WriteLine(""Hello world!"");
-    }
-}
-            ");
+                                                        using System;
+                                                        using System.Collections.Generic;
+                                                        using System.Linq;
+                                                        using System.Text;
+                                                        using System.Threading.Tasks;
+
+                                                        public static class Program
+                                                        {
+                                                            public static void Main(string[] args)
+                                                            {
+                                                                Console.WriteLine("Hello world!");
+                                                            }
+                                                        }
+                                                                    
+                                                        """);
             return syntaxTree;
         }
     }

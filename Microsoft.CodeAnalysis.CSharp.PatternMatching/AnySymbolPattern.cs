@@ -1,45 +1,39 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Microsoft.CodeAnalysis.CSharp.PatternMatching
+namespace Microsoft.CodeAnalysis.CSharp.PatternMatching;
+
+public class AnySymbolPattern : ExpressionPattern
 {
-    public class AnySymbolPattern : ExpressionPattern
+    private readonly Action<ExpressionSyntax, ISymbol> _action;
+
+    internal AnySymbolPattern(Action<ExpressionSyntax, ISymbol> action)
     {
-        private readonly Action<ExpressionSyntax, ISymbol> _action;
+        _action = action;
+    }
 
-        internal AnySymbolPattern(Action<ExpressionSyntax, ISymbol> action)
-        {
-            _action = action;
-        }
+    internal override bool Test(SyntaxNode node, SemanticModel semanticModel)
+    {
+        if (semanticModel == null)
+            throw new ArgumentNullException(nameof(semanticModel));
 
-        internal override bool Test(SyntaxNode node, SemanticModel semanticModel)
-        {
-            if (semanticModel == null)
-                throw new ArgumentNullException(nameof(semanticModel));
+        if (!(node is ExpressionSyntax typed))
+            return false;
 
-            if (!(node is ExpressionSyntax typed))
-                return false;
+        return semanticModel.TryGetSymbol(typed, out var _);
+    }
 
-            return semanticModel.TryGetSymbol(typed, out var _);
-        }
+    internal override void RunCallback(SyntaxNode node, SemanticModel semanticModel)
+    {
+        if (semanticModel == null)
+            throw new ArgumentNullException(nameof(semanticModel));
 
-        internal override void RunCallback(SyntaxNode node, SemanticModel semanticModel)
-        {
-            if (semanticModel == null)
-                throw new ArgumentNullException(nameof(semanticModel));
+        if (_action == null)
+            return;
 
-            if (_action == null)
-                return;
+        var typed = (ExpressionSyntax)node;
 
-            var typed = (ExpressionSyntax)node;
+        semanticModel.TryGetSymbol(typed, out var symbol);
 
-            semanticModel.TryGetSymbol(typed, out var symbol);
-
-            _action?.Invoke(typed, symbol);
-        }
+        _action?.Invoke(typed, symbol);
     }
 }

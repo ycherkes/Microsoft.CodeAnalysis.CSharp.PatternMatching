@@ -1,70 +1,60 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
+﻿using Microsoft.CodeAnalysis.CSharp.Syntax;
 
-namespace Microsoft.CodeAnalysis.CSharp.PatternMatching
+namespace Microsoft.CodeAnalysis.CSharp.PatternMatching;
+
+public class AnyLambdaExpressionPattern : LambdaExpressionPattern
 {
-    public class AnyLambdaExpressionPattern : LambdaExpressionPattern
+    private readonly Action<LambdaExpressionSyntax> _action;
+    private readonly ParameterListPattern _parameterList;
+
+    internal AnyLambdaExpressionPattern(PatternNode body, ParameterListPattern parameterList,
+        Action<LambdaExpressionSyntax> action)
+        : base(body)
     {
-        private readonly ParameterListPattern _parameterList;
-        private readonly Action<LambdaExpressionSyntax> _action;
+        _parameterList = parameterList;
+        _action = action;
+    }
 
-        internal AnyLambdaExpressionPattern(PatternNode body, ParameterListPattern parameterList, Action<LambdaExpressionSyntax> action)
-            : base(body)
-        {
-            _parameterList = parameterList;
-            _action = action;
-        }
+    internal override bool Test(SyntaxNode node, SemanticModel semanticModel)
+    {
+        if (!base.Test(node, semanticModel))
+            return false;
 
-        internal override bool Test(SyntaxNode node, SemanticModel semanticModel)
+        if (node is ParenthesizedLambdaExpressionSyntax parenthesized)
         {
-            if (!base.Test(node, semanticModel))
+            if (_parameterList != null && !_parameterList.Test(parenthesized.ParameterList, semanticModel))
                 return false;
-
-            if (node is ParenthesizedLambdaExpressionSyntax parenthesized)
-            {
-                if (_parameterList != null && !_parameterList.Test(parenthesized.ParameterList, semanticModel))
-                    return false;
-            }
-            else if (node is SimpleLambdaExpressionSyntax simple)
-            {
-                if (_parameterList != null && !_parameterList.Test(
+        }
+        else if (node is SimpleLambdaExpressionSyntax simple)
+        {
+            if (_parameterList != null && !_parameterList.Test(
                     SyntaxFactory.ParameterList(
                         SyntaxFactory.SeparatedList(new[] { simple.Parameter })
                     ),
                     semanticModel
                 ))
-                    return false;
-            }
-            else
-            {
                 return false;
-            }
-
-            return true;
         }
-
-        internal override void RunCallback(SyntaxNode node, SemanticModel semanticModel)
+        else
         {
-            if (node is ParenthesizedLambdaExpressionSyntax parenthesized)
-            {
-                _parameterList?.RunCallback(parenthesized.ParameterList, semanticModel);
-            }
-            else
-            {
-                _parameterList?.RunCallback(
-                    SyntaxFactory.ParameterList(
-                        SyntaxFactory.SeparatedList(new[] { ((SimpleLambdaExpressionSyntax)node).Parameter })
-                    ),
-                    semanticModel
-                );
-            }
-
-            _action?.Invoke((LambdaExpressionSyntax)node);
+            return false;
         }
+
+        return true;
+    }
+
+    internal override void RunCallback(SyntaxNode node, SemanticModel semanticModel)
+    {
+        if (node is ParenthesizedLambdaExpressionSyntax parenthesized)
+            _parameterList?.RunCallback(parenthesized.ParameterList, semanticModel);
+        else
+            _parameterList?.RunCallback(
+                SyntaxFactory.ParameterList(
+                    SyntaxFactory.SeparatedList(new[] { ((SimpleLambdaExpressionSyntax)node).Parameter })
+                ),
+                semanticModel
+            );
+
+        _action?.Invoke((LambdaExpressionSyntax)node);
     }
 }
